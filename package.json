@@ -3,7 +3,9 @@
     "license": "MIT",
     "main": "dist/index.js",
     "typings": "dist/types/index.d.ts",
-    "files": ["dist/**/*"],
+    "files": [
+        "dist/**/*"
+    ],
     "engines": {
         "node": ">=14"
     },
@@ -50,6 +52,7 @@
         "@betterer/cli": "^5.1.7",
         "@betterer/typescript": "^5.1.7",
         "@iazlabs/ts-build": "^0.1.12",
+        "rxjs": "^6.6.7 || ^7.0",
         "@size-limit/preset-small-lib": "^7.0.8",
         "@types/jest": "^27.4.1",
         "@typescript-eslint/eslint-plugin": "^5.18.0",
@@ -67,10 +70,9 @@
         "@iazlabs/functional": "^0.1.8"
     },
     "peerDependencies": {
-
         "rxjs": "^6.6.7 || ^7.0"
     },
     "publishConfig": {
-      "registry": "https://npm.pkg.github.com/@iazlabs"
+        "registry": "https://npm.pkg.github.com/@iazlabs"
     }
 }
