@@ -65,42 +65,7 @@ function useStateReducer<S>(state: S, action: SetStateFunctionType<S> | S): S {
  * @param initial 
  * @returns 
  */
-export function useRxState<T = any>(initial: T, bufferSize = Infinity) {
-  // We use a buffer of size 4 to maintain only
-  // The last emitted value by the setState function
-  // We use ReplaySubject instead of Behaviour subject
-  // because we don't want to invoke the function if the value of
-  // the initial state should be computed using a function
-  // const _subject = new ReplaySubject(bufferSize);
-
-  // // Variable is used to keep track of the previous value
-  // // produced by the observable, so that when {@see setState}
-  // // is called with a callback we pass the previously emitted
-  // // value to the developper
-  // let _previous!: T;
-
-  // // Provides a memoization implementation arround the inital
-  // // if the initial value is a function type
-  // const _initial = (
-  //   typeof initial === 'function' ? memoize(initial as any) : initial
-  // ) as any;
-
-  // @internal - Function to update state object
-  // Mutate or update the state of value wrapped by the useRxState()
-  // function. It does not insure immutability by default
-  // there for developer should develop with immutability in mind
-  // const setState = (_state: unknown | SetStateFunctionType<unknown>) => {
-  //   typeof _state === 'function'
-  //     ? _subject.next((_state as SetStateFunctionType<unknown>)(_previous))
-  //     : _subject.next(_state);
-  // };
-
-  // const state = _subject.pipe(
-  //   startWith(typeof _initial === 'function' ? _initial() : _initial),
-  //   distinctUntilChanged(),
-  //   tap((state) => (_previous = state))
-  // ) as Observable<T>;
-
+export function useRxState<T = any>(initial: T, bufferSize = 1) {
   return useRxReducer(
     useStateReducer,
     initial,
