@@ -1,5 +1,5 @@
 {
-    "version": "0.1.1",
+    "version": "0.1.2",
     "license": "MIT",
     "main": "dist/index.js",
     "typings": "dist/types/index.d.ts",
@@ -41,13 +41,16 @@
     "name": "@iazlabs/rx-hooks",
     "author": "azandrew-sidoine",
     "module": "dist/esm/index.js",
-    "size-limit": [{
-        "path": "dist/cjs/index.js",
-        "limit": "10 KB"
-    }, {
-        "path": "dist/esm/index.js",
-        "limit": "10 KB"
-    }],
+    "size-limit": [
+        {
+            "path": "dist/cjs/index.js",
+            "limit": "10 KB"
+        },
+        {
+            "path": "dist/esm/index.js",
+            "limit": "10 KB"
+        }
+    ],
     "devDependencies": {
         "@betterer/cli": "^5.1.7",
         "@betterer/typescript": "^5.1.7",
