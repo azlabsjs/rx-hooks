@@ -90,15 +90,15 @@ dispatch({
 });
 ```
 
-## `useRxEffect`
+## `useCompletableRxEffect`
 
-`useRxEffect` utility function allow developper with less knownledge of rxjs API to listen to observables changes without externally subscribing to the observable. It provides developper with a synchronous API for performing side effects.
+`useCompletableRxEffect` utility function allow developper with less knownledge of rxjs API to listen to observables changes without externally subscribing to the observable. It provides developper with a synchronous API for performing side effects.
 
-`useRxEffect` will internally subscribe to observable on the behalf of the developper, and return a `complete` method, which when called will unsubscribe to the observable.
+`useCompletableRxEffect` will internally subscribe to observable on the behalf of the developper, and return a `complete` method, which when called will unsubscribe to the observable.
 
 ```js
 import {
-    useRxEffect
+    useCompletableRxEffect
 } from '@iazlabs/rx-hooks';
 import {
     interval
@@ -108,7 +108,7 @@ import {
 } from 'rxjs/operators';
 // Create an observable that increment the count
 // after each seconds
-const subject$ = useRxEffect(
+const subject$ = useCompletableRxEffect(
     interval(1000).pipe(
         tap(() => ++count),
         tap(() => console.log(count))
@@ -129,11 +129,11 @@ interval(5000)
 ```
 
 **Note**
-You are not required to call the `complete()` method on the result of the `useRxEffect` call, for API calls or observable that may run only once.
+You are not required to call the `complete()` method on the result of the `useCompletableRxEffect` call, for API calls or observable that may run only once.
 
 ```js
 import {
-    useRxEffect
+    useCompletableRxEffect
 } from '@iazlabs/rx-hooks';
 import {
     fromFetch
@@ -143,7 +143,7 @@ import {
 } from 'rxjs/operators';
 
 // The example below uses rxjs fetch wrapper to make an http request
-useRxEffect(
+useCompletableRxEffect(
     fromFetch('https://jsonplaceholder.typicode.com/posts').pipe(
         switchMap((response) => {
             if (response.ok) {
@@ -167,7 +167,7 @@ The function takes as argument a destruction function that should be run to clea
 
 ```js
 import {
-    useRxEffect
+    useCompletableRxEffect
 } from '@iazlabs/rx-hooks';
 import {
     fromFetch
@@ -177,7 +177,7 @@ import {
 } from 'rxjs/operators';
 
 // The example below uses rxjs fetch wrapper to make an http request
-useRxEffect(
+useCompletableRxEffect(
     fromFetch('https://jsonplaceholder.typicode.com/posts').pipe(
         switchMap((response) => {
             if (response.ok) {
@@ -197,4 +197,76 @@ useRxEffect(
         // Execute when complete is called by the developper
     }
 )
+```
+
+**Note**
+Prefer use of {@see useRxEffect} when in class scope in which allow you pass unsubscription method as second argment and abtract away calling `complete()` method or invoking the effect to complete it.
+
+## `useRxEffect`
+
+{@see useRxEffect} tries to abstract away subsription and unsubscription flows of RxJS observables in Javascript classes with destructor method.
+
+Developpers must provide an observable input as first argument and a tuple of class instance and destructor method as second argument. Example usage is as below.
+
+```js
+    class JSClass {
+        private effect$ = useRxEffect(
+            interval(1000).pipe(
+                take(10),
+                tap((state) => console.log('Effect 1:', state))
+            ),
+            [this, 'destroy']
+        );
+
+        public destroy() {
+            console.log('Completing....');
+        }
+    }
+
+    *
+```
+
+**Note**
+Implementation support angular components, injectables and directives class ngOnDestroy methods be default. Therefore developper does not have to explicitly specify the detroy method.
+
+**Note**
+As the API is experimental, you should use it at your own risk.😁
+
+```ts
+import {Component, OnDestroy} from '@angular/core';
+
+@Component({...})
+class DummyComponent implements OnDestroy {
+    private effect$ = useRxEffect(
+        interval(1000).pipe(
+            take(10),
+            tap((state) => console.log('Effect 1:', state))
+        ),
+        [this] // Argument tells the to complete or unsubscribe from observable
+        // When the component `ngOnDestroy` method is invoke
+    );
+
+    private effect2$ = useRxEffect(
+        fromFetch('https://jsonplaceholder.typicode.com/posts')
+        .pipe(
+            switchMap((response) => {
+                if (response.ok) {
+                    // OK return data
+                    return response.json();
+                } else {
+                    // Server is returning a status requiring the client to try something else.
+                    return of({
+                        error: true,
+                        message: `Error ${response.status}`
+                    });
+                }
+            }),
+        tap(console.log)
+    ); // Runs only once and does not unsubscribe 
+
+    public ngOnDestroy() {
+        console.log('Completing....');
+    }
+}
+
 ```

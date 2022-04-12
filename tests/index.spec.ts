@@ -1,6 +1,7 @@
-import { interval, lastValueFrom, Subject } from 'rxjs';
+import { interval, lastValueFrom, of, Subject } from 'rxjs';
 import { tap, takeUntil, first, take } from 'rxjs/operators';
 import {
+  useCompletableRxEffect,
   useRxEffect,
   useRxReducer,
   useRxState,
@@ -8,6 +9,21 @@ import {
 } from '../src';
 
 jest.setTimeout(10000);
+
+const testResponse: { [index: string]: any }[] = JSON.parse(
+  `[{
+    "userId": 1,
+    "id": 1,
+    "title": "sunt aut facere repellat provident occaecati excepturi optio reprehenderit",
+    "body": "quia et suscipitnsuscipit recusandae consequuntur expedita et cumnreprehenderit molestiae ut ut quas totamnnostrum rerum est autem sunt rem eveniet architecto"
+    },
+    {
+    "userId": 1,
+    "id": 2,
+    "title": "qui est esse",
+    "body": "est rerum tempore vitaensequi sint nihil reprehenderit dolor beatae ea dolores nequenfugiat blanditiis voluptate porro vel nihil molestiae ut reiciendisnqui aperiam non debitis possimus qui neque nisi nulla"
+    }]`
+);
 
 describe('Test hooks implementation', () => {
   it('states should contains the initial state and the last emitted state value', async () => {
@@ -131,7 +147,7 @@ describe('Test hooks implementation', () => {
     const values: number[] = [];
     // In the effect we cache values produced by the subject into
     // values list variable
-    const effect = useRxEffect(
+    const effect$ = useCompletableRxEffect(
       subject$.asObservable().pipe(
         tap((state) => {
           localState = state;
@@ -143,7 +159,7 @@ describe('Test hooks implementation', () => {
     // We complete the observable internally by calling complete
     // when localState variable value equals 10
     if (localState === 10) {
-      effect.complete();
+      effect$();
     }
     let increment = 0;
     interval(500)
@@ -161,10 +177,26 @@ describe('Test hooks implementation', () => {
       interval(7000).pipe(
         first(),
         tap(() => {
-          console.log(values);
           expect(values).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
         })
       )
     );
+  });
+
+  it('rxEffect should invoke even if user does not call subscribe method', async () => {
+    new (class {
+      constructor() {
+        useRxEffect(
+          of(testResponse).pipe(
+            tap((state) => expect(Array.isArray(state)).toBe(true))
+          )
+        );
+      }
+
+      public ngOnDestroy() {
+        console.log('Completing....');
+      }
+    })();
+    await lastValueFrom(interval(2000).pipe(first()));
   });
 });

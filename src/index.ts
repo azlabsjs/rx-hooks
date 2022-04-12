@@ -1,15 +1,8 @@
 import { memoize } from '@iazlabs/functional';
-import { Observable, ReplaySubject, Subject } from 'rxjs';
+import { ObservableInput, ReplaySubject } from 'rxjs';
+import { distinctUntilChanged, filter, scan, startWith } from 'rxjs/operators';
+import { createEffect } from './internals';
 import {
-  distinctUntilChanged,
-  filter,
-  scan,
-  startWith,
-  takeUntil,
-} from 'rxjs/operators';
-import { completeSubject, getSymbol } from './internals';
-import {
-  JsFunction,
   SetStateFunctionType,
   UseReducerReturnType,
   UseStateReturnType,
@@ -32,7 +25,7 @@ function useStateReducer<S>(state: S, action: SetStateFunctionType<S> | S): S {
  * **Warning**
  * As the API is experimental, you should use it at your own risk.😁
  * 
- * **Note**
+ * **Note:**
  * By default, we maintains only the last produced state value in cache, but the
  * function takes a bufferSize as second parameter to allow developper to configure
  * how many state changes should be retains before flushing old states
@@ -77,7 +70,7 @@ export function useRxState<T = any>(initial: T, bufferSize = 1) {
  * {@see useRxReducer} is an experimental but yet working implementation
  * of react useReducer() hooks, for managing local state in angular components.
  * 
- * **Note**
+ * **Note:**
  * As the API is experimental, you should use it at your own risk.😁
  * 
  * ```js
@@ -138,44 +131,93 @@ export function useRxReducer<T, ActionType = any>(
 }
 
 /**
- * {@see useEffect} tries to abstract away subsription and unsubscription
- * flows of RxJS observables by using completable function that when
- * called will internally unsubscribe from the observable.
+ * {@see useRxEffect} tries to abstract away subsription and unsubscription
+ * flows of RxJS observables in Javascript classes with destructor method.
  * 
- * **Note**
- * As the API is experimental, you should use it at your own risk.😁
+ * Developpers must provide an observable input as first argument and a tuple of class
+ * instance and destructor method as second argument. Example usage is as below.
  * 
  * ```js
- * // Create an observable that increment the count
- * // after each seconds
- * const subject$ = useRxEffect(
-    interval(1000).pipe(
-      tap(() => ++count),
-      tap(() => console.log(count))
-    ),
-    () => {
-      console.log('Calling ... Destructor');
-    }
-  );
+    class JSClass {
+      private effect$ = useRxEffect(
+        interval(1000).pipe(
+          take(10),
+          tap((state) => console.log('Effect 1:', state))
+        ),
+        [this, 'destroy']
+      );
 
-  // Complete the observable after 5 seconds
-    interval(5000)
-    .pipe(
-      first(),
-      // Call complete to trigger unsubscribe event on the observable
-      tap(() => subject$.complete())
-    )
-    .subscribe();
+      public destroy() {
+        console.log('Completing....');
+      }
+    }
+
  * ```
  * 
- * **Note**
- * You are not required to call the `complete()` method on the result
- * of the `useRxEffect` call, for API calls or observable that may run
- * only once.
+ * **Note:**
+ * Implementation support angular components, injectables and directives
+ * class ngOnDestroy methods be default. Therefore developper does not have
+ * to explicitly specify the detroy method
+ * 
+ * **Note:**
+ * As the API is experimental, you should use it at your own risk.😁
+ * 
+ * ```ts
+ * 
+ *  import {Component, OnDestroy} from '@angular/core';
+ * 
+    Component({...})
+    class DummyComponent implements OnDestroy {
+      private effect$ = useRxEffect(
+        interval(1000).pipe(
+          take(10),
+          tap((state) => console.log('Effect 1:', state))
+        ),
+        [this]
+      );
+
+      private effect2$ = useRxEffect(
+        interval(2000).pipe(
+          take(10),
+          tap((state) => console.log('Effect 2:', state))
+        ),
+        [this]
+      );
+
+      public ngOnDestroy() {
+        console.log('Completing....');
+      }
+    }
+
+ * ```
+ * 
+ * 
+ * 
+ * @param source 
+ * @param destructor 
+ */
+
+export function useRxEffect<T>(
+  source: ObservableInput<T>,
+  destructor?: [object, string] | [object]
+) {
+  createEffect(source, destructor);
+}
+
+/**
+ * {@see useCompletableRxEffect} provides a functional interface arround rxjs
+ * observable `complete` and `unsubscribe` method by returning a callable object
+ * that complete the wrapped observable input.
+ * 
+ * **Note:**
+ * Prefer use of {@see useRxEffect} when in class scope in which allow you pass
+ * unsubscription method as second argment and abtract away calling `complete()`
+ * method or invoking the effect to complete it.
+ * 
  * 
  * ```js
  * // The example below uses rxjs fetch wrapper to make an http request
- * useRxEffect(
+ * effect$ = useCompletableRxEffect(
     fromFetch('https://jsonplaceholder.typicode.com/posts').pipe(
       switchMap((response) => {
         if (response.ok) {
@@ -188,33 +230,53 @@ export function useRxReducer<T, ActionType = any>(
       }),
       tap(console.log)
     )
-  )
+  );
+  // Completing the observable
+  effect$.complete();
+  // Or by simply invoking the effect
+  effect$();
+
  * ```
  * 
- * The function takes as argument a destruction function that should be run to
+ * The function takes as last argument an optional destruction function that should be run to
  * cleanup resources when the observable complete or unsubscribe
+ * ```ts
+ * const effect$ = useCompletableRxEffect(
+      interval(1000).pipe(
+          tap(() => ++count),
+          tap(() => console.log(count))
+      ),
+      () => {
+          // Cleanup resources
+          console.log('Completing....');
+      }
+  );
+  // Comple the effect after 5 seconds
+  interval(5000)
+  .pipe(
+    first(),
+    tap(() => effect$())
+  )
+  .subscribe();
+
+ * ```
  * 
- * @param source 
- * @param destruct 
+ * **Note:**
+ * You are not required to call the `complete()` method on the result
+ * of the `useRxEffect` call, for API calls or observable that may run
+ * only once.
+ * 
+ * **Note:**
+ * As the API is experimental, you should use it at your own risk.😁
+ *
+ * @param source
+ * @param onDestroy
+ * @returns
  */
-export function useRxEffect<T>(source: Observable<T>, destruct?: JsFunction) {
-  const symbol = getSymbol();
-  const instance = {
-    [symbol]: new Subject<void>(),
-  };
-  // TODO: Subscribe to the side uffect
-  source.pipe(takeUntil(instance[symbol as any])).subscribe();
-  function _subject(...args: unknown[]) {
-    // eslint-disable-next-line prefer-rest-params
-    if (destruct && typeof destruct === 'function') {
-      destruct(...args);
-    }
-    completeSubject(instance, symbol);
-  }
-  return Object.defineProperty(_subject, 'complete', {
-    value: () => {
-      _subject();
-    },
-  }) as any as JsFunction &
+export function useCompletableRxEffect<T>(
+  source: ObservableInput<T>,
+  onDestroy?: (...p: any[]) => unknown
+) {
+  return createEffect(source, onDestroy) as ((...args: any[]) => unknown) &
     Pick<{ complete: (...args: any[]) => unknown }, 'complete'>;
 }

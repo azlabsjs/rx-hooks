@@ -1,0 +1,6 @@
+# Changelogs
+
+## [0.1.2] 2022-04-12
+
+- added useCompletableRxEffect to be used outside class scope
+- updated implementation of rxEffect to accept a Javascript object and destruction methods as parameters
