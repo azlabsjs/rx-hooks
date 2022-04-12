@@ -3,6 +3,7 @@ import { ObservableInput, ReplaySubject } from 'rxjs';
 import { distinctUntilChanged, filter, scan, startWith } from 'rxjs/operators';
 import { createEffect } from './internals';
 import {
+  RecordKey,
   SetStateFunctionType,
   UseReducerReturnType,
   UseStateReturnType,
@@ -197,9 +198,9 @@ export function useRxReducer<T, ActionType = any>(
  * @param destructor 
  */
 
-export function useRxEffect<T>(
+export function useRxEffect<T, InstanceType = Record<RecordKey, any>>(
   source: ObservableInput<T>,
-  destructor?: [object, string] | [object]
+  destructor?: [InstanceType, keyof InstanceType] | [InstanceType]
 ) {
   createEffect(source, destructor);
 }
@@ -275,7 +276,7 @@ export function useRxEffect<T>(
  */
 export function useCompletableRxEffect<T>(
   source: ObservableInput<T>,
-  onDestroy?: (...p: any[]) => unknown
+  onDestroy?: (...p: any) => unknown
 ) {
   return createEffect(source, onDestroy) as ((...args: any[]) => unknown) &
     Pick<{ complete: (...args: any[]) => unknown }, 'complete'>;

@@ -1,4 +1,5 @@
 import { from, ObservableInput, Subject, takeUntil } from 'rxjs';
+import { RecordKey } from './types';
 
 // @internal
 function completeSubjectOnInstance(instance: any, prop: symbol) {
@@ -55,17 +56,17 @@ export function createSubjectOnInstance(instance: any, symbol: symbol) {
 
 export function createCompletableInstance(
   symbol: symbol,
-  callback: ((...args: any[]) => unknown) | undefined
+  callback: ((...args: any) => unknown) | undefined
 ) {
-  let instance = (...values: unknown[]) => {
+  let instance = (...values: any) => {
     if (callback && typeof callback === 'function') {
       callback(...values);
     }
     completeSubjectOnInstance(instance, symbol);
   };
   instance = Object.defineProperty(instance, 'complete', {
-    value: () => {
-      instance();
+    value: (...args: any) => {
+      instance(...args);
     },
   });
   return instance;
@@ -73,9 +74,9 @@ export function createCompletableInstance(
 
 // @internal
 function wrapClassMethod(instance: any, method: string, symbol: symbol) {
-  const original: (...args: any[]) => unknown | null | undefined =
+  const original: (...args: any) => unknown | null | undefined =
     instance[method] || undefined;
-  return (...args: any[]) => {
+  return (...args: any) => {
     if (null !== original && typeof original !== 'undefined') {
       original(...args);
     }
@@ -87,9 +88,13 @@ function wrapClassMethod(instance: any, method: string, symbol: symbol) {
 }
 
 // @internal
-function decorateClassMethod(instance: any, symbol: symbol, method?: string) {
+function decorateClassMethod<T extends Record<keyof T, any> = any>(
+  instance: T,
+  symbol: symbol,
+  method?: keyof T
+) {
   if (typeof method === 'string') {
-    instance[method] = wrapClassMethod(instance, method, symbol);
+    instance[method] = wrapClassMethod(instance, method, symbol) as any;
   } else if (isPipe(instance)) {
     wrapPipe(instance, symbol);
   } else {
@@ -110,28 +115,32 @@ function wrapInjectable(type: any, symbol: symbol): void {
 }
 
 // @internal
-export function createEffect<T>(
+export function createEffect<T, InstanceType = Record<RecordKey, any>>(
   source: ObservableInput<T>,
   args:
-    | [Record<string, any>, string]
-    | [Record<string, any>]
+    | [InstanceType, keyof InstanceType]
+    | [InstanceType]
     | ((...p: any[]) => unknown)
     | undefined
 ) {
+  const isArgsTuple = Array.isArray(args);
   // eslint-disable-next-line prefer-const
-  let [instance, method, callback] = Array.isArray(args)
+  let [instance, method, callback] = isArgsTuple
     ? [...args, undefined]
-    : [null, undefined, args ?? (() => undefined)];
+    : [undefined, undefined, args ?? (() => undefined)];
   // Create a
   const symbol = getSymbol(method);
   if (typeof instance === 'undefined' || instance === null) {
     // If the instance is undefined, we assume method is used
     // outside the scope of a class therefore it must be completed
     // manually  by the developper
-    instance = createCompletableInstance(symbol, callback);
+    instance = createCompletableInstance(
+      symbol,
+      callback
+    ) as any as InstanceType;
   }
   instance = createSubjectOnInstance(instance, symbol);
-  if (Array.isArray(args)) {
+  if (isArgsTuple && typeof instance !== 'undefined') {
     // **Note**
     // Implementation support angular component, injectable and directive
     // class ngOnDestroy be default
@@ -141,7 +150,7 @@ export function createEffect<T>(
     return;
   }
   from(source)
-    .pipe(takeUntil(instance[symbol as any] as Subject<void>))
+    .pipe(takeUntil((instance as any)[symbol as any] as Subject<void>))
     .subscribe();
   // Creates a completable object which when call
   // will unsubscribe from the internal observable

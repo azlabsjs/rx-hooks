@@ -150,21 +150,24 @@ describe('Test hooks implementation', () => {
     const effect$ = useCompletableRxEffect(
       subject$.asObservable().pipe(
         tap((state) => {
+          // We complete the observable internally by calling complete
+          // when localState variable value equals 10
+          if (state === 10) {
+            effect$('Running comple effect...');
+          }
           localState = state;
           values.push(localState);
         })
-      )
+      ),
+      (arg: string) => {
+        // Test if the argments is passed to the completed function
+        expect(arg).toEqual('Running comple effect...');
+      }
     );
-
-    // We complete the observable internally by calling complete
-    // when localState variable value equals 10
-    if (localState === 10) {
-      effect$();
-    }
     let increment = 0;
-    interval(500)
+    interval(10)
       .pipe(
-        take(10),
+        take(100),
         tap(() => {
           ++increment;
           subject$.next(increment);
@@ -174,7 +177,7 @@ describe('Test hooks implementation', () => {
     // We simulate a wait from 7 seconds before we assert to make sure
     // the complete is successfully run
     await lastValueFrom(
-      interval(7000).pipe(
+      interval(2000).pipe(
         first(),
         tap(() => {
           expect(values).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);

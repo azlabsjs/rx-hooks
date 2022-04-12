@@ -18,3 +18,6 @@ export type UseReducerReturnType<T, ActionType> = readonly [
 
 //@internal Internal Javascript function type definitions
 export type JsFunction<T = unknown> = (...args: any[]) => T | (() => T);
+
+// @internal
+export type RecordKey = string | number | symbol;
