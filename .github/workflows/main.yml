@@ -21,18 +21,15 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Use Node ${{ matrix.node }}
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node }}
 
       - name: Check npm version
         run: npm -v
-
-      - name: Removes package-lock.json
-        run: rm package-lock.json
 
       - name: Install deps and build (with cache)
         uses: bahmutov/npm-install@v1
@@ -51,17 +48,14 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
         with:
-          node-version: 12
+          node-version: 16
           registry-url: https://npm.pkg.github.com/
-          scope: '@iazlabs'
+          scope: '@azlabsjs'
       - name: Check npm version
         run: npm -v
-
-      - name: Removes package-lock.json
-        run: rm package-lock.json
 
       - name: Install deps
         uses: bahmutov/npm-install@v1

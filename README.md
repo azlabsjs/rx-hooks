@@ -99,7 +99,7 @@ dispatch({
 ```js
 import {
     useCompletableRxEffect
-} from '@iazlabs/rx-hooks';
+} from '@azlabsjs/rx-hooks';
 import {
     interval
 } from 'rxjs';
@@ -134,7 +134,7 @@ You are not required to call the `complete()` method on the result of the `useCo
 ```js
 import {
     useCompletableRxEffect
-} from '@iazlabs/rx-hooks';
+} from '@azlabsjs/rx-hooks';
 import {
     fromFetch
 } from 'rxjs';
@@ -168,7 +168,7 @@ The function takes as argument a destruction function that should be run to clea
 ```js
 import {
     useCompletableRxEffect
-} from '@iazlabs/rx-hooks';
+} from '@azlabsjs/rx-hooks';
 import {
     fromFetch
 } from 'rxjs';

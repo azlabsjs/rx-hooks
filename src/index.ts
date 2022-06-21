@@ -1,4 +1,4 @@
-import { memoize } from '@iazlabs/functional';
+import { memoize } from '@azlabsjs/functional';
 import { ObservableInput, ReplaySubject } from 'rxjs';
 import { distinctUntilChanged, filter, scan, startWith } from 'rxjs/operators';
 import { createEffect } from './internals';
