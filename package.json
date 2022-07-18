@@ -33,28 +33,28 @@
     },
     "exports": {
         ".": {
-            "import": "./dist/esm/index.js",
-            "require": "./dist/cjs/index.js",
-            "default": "./dist/cjs/index.js"
+            "import": "./dist/esm/index.mjs",
+            "require": "./dist/cjs/index.cjs",
+            "default": "./dist/cjs/index.cjs"
         }
     },
     "name": "@azlabsjs/rx-hooks",
     "author": "azandrew-sidoine",
-    "module": "dist/esm/index.js",
+    "module": "dist/esm/index.mjs",
     "size-limit": [
         {
-            "path": "dist/cjs/index.js",
+            "path": "dist/cjs/index.cjs",
             "limit": "10 KB"
         },
         {
-            "path": "dist/esm/index.js",
+            "path": "dist/esm/index.mjs",
             "limit": "10 KB"
         }
     ],
     "devDependencies": {
         "@betterer/cli": "^5.1.7",
         "@betterer/typescript": "^5.1.7",
-        "@azlabsjs/ts-build": "^0.1.13",
+        "@azlabsjs/ts-build": "^0.1.16",
         "rxjs": "^6.6.7 || ^7.0",
         "@size-limit/preset-small-lib": "^7.0.8",
         "@types/jest": "^27.4.1",
