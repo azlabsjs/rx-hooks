@@ -1,10 +1,12 @@
 import { memoize } from '@azlabsjs/functional';
-import { ObservableInput, ReplaySubject } from 'rxjs';
+import { Observable, ObservableInput, ReplaySubject } from 'rxjs';
 import { distinctUntilChanged, filter, scan, startWith } from 'rxjs/operators';
 import { createEffect } from './internals';
 import {
+  CreateEffectType,
   RecordKey,
   SetStateFunctionType,
+  SourceArgType,
   UseReducerReturnType,
   UseStateReturnType,
 } from './types';
@@ -195,14 +197,24 @@ export function useRxReducer<T, ActionType = any>(
  * 
  * 
  * @param source 
- * @param destructor 
+ * @param destroy 
  */
 
-export function useRxEffect<T, InstanceType = Record<RecordKey, any>>(
-  source: ObservableInput<T>,
-  destructor?: [InstanceType, keyof InstanceType] | [InstanceType]
+export function useRxEffect<
+  T,
+  TInstance = Record<RecordKey, any>,
+  TObservable extends unknown[] = unknown[]
+>(
+  source:
+    | ObservableInput<T>
+    | ((...value: SourceArgType<typeof destroy, TObservable>) => void),
+  destroy?:
+    | [TInstance, keyof TInstance]
+    | [TInstance, keyof TInstance, Observable<TObservable> | TObservable]
+    | [TInstance, Observable<TObservable> | TObservable]
+    | Observable<TObservable>
 ) {
-  createEffect(source, destructor);
+  createEffect(source, destroy);
 }
 
 /**
@@ -252,7 +264,7 @@ export function useRxEffect<T, InstanceType = Record<RecordKey, any>>(
           console.log('Completing....');
       }
   );
-  // Comple the effect after 5 seconds
+  // Complete the effect after 5 seconds
   interval(5000)
   .pipe(
     first(),
@@ -271,13 +283,24 @@ export function useRxEffect<T, InstanceType = Record<RecordKey, any>>(
  * As the API is experimental, you should use it at your own risk.😁
  *
  * @param source
- * @param onDestroy
+ * @param complete
  * @returns
  */
-export function useCompletableRxEffect<T>(
-  source: ObservableInput<T>,
-  onDestroy?: (...p: any) => unknown
+export function useCompletableRxEffect<
+  T,
+  TObservable extends unknown[] = unknown[]
+>(
+  source:
+    | ObservableInput<T>
+    | ((...value: SourceArgType<typeof complete, TObservable>) => void),
+  complete:
+    | ((...p: any[]) => unknown)
+    | [(...p: any[]) => unknown, Observable<TObservable> | TObservable]
 ) {
-  return createEffect(source, onDestroy) as ((...args: any[]) => unknown) &
-    Pick<{ complete: (...args: any[]) => unknown }, 'complete'>;
+  const completeType = typeof complete;
+  const deps =
+    completeType === 'function' ? [] : (complete as any[])[1] ?? undefined;
+  const _complete =
+    completeType === 'function' ? complete : (complete as any[])[0];
+  return createEffect(source, _complete, deps as any) as CreateEffectType;
 }

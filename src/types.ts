@@ -1,4 +1,4 @@
-import { Observable } from 'rxjs';
+import { Observable, ObservableInput } from 'rxjs';
 
 // @internal Internal type definition of function for modifying
 // component state
@@ -21,3 +21,14 @@ export type JsFunction<T = unknown> = (...args: any[]) => T | (() => T);
 
 // @internal
 export type RecordKey = string | number | symbol;
+export type DependenciesType<TObservableType> =
+  | ObservableInput<TObservableType>
+  | unknown;
+// @internal
+export type SourceArgType<
+  T,
+  TObservable extends unknown[]
+> = T extends Observable<TObservable> ? TObservable : never;
+
+export type CreateEffectType = ((...args: any[]) => unknown) &
+  Pick<{ complete: (...args: any[]) => unknown }, 'complete'>;

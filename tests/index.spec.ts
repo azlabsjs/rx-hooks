@@ -202,4 +202,28 @@ describe('Test hooks implementation', () => {
     })();
     await lastValueFrom(interval(2000).pipe(first()));
   });
+
+  it('rxEffect should run when dependencies changes', async () => {
+    let subject2$ = new Subject<[string, Record<string, unknown>]>();
+    useCompletableRxEffect(
+      (path: string, options?: Record<string, unknown>) => {
+        expect(path).toEqual('api/v1/posts');
+        expect(options).toEqual({
+          _query: {
+            where: ['comments', ['My comments']],
+          },
+        });
+      },
+      [() => console.log('completed'), subject2$]
+    );
+    subject2$.next([
+      'api/v1/posts',
+      {
+        _query: {
+          where: ['comments', ['My comments']],
+        },
+      },
+    ]);
+    await lastValueFrom(interval(1000).pipe(first()));
+  });
 });

@@ -1,5 +1,28 @@
-import { from, ObservableInput, Subject, takeUntil } from 'rxjs';
-import { RecordKey } from './types';
+import {
+  distinctUntilChanged,
+  from,
+  Observable,
+  ObservableInput,
+  Subject,
+  takeUntil,
+  tap,
+  observeOn,
+  animationFrameScheduler,
+  of,
+  isObservable,
+  asyncScheduler,
+} from 'rxjs';
+import { RecordKey, SourceArgType } from './types';
+
+function arrayPad<T extends Array<any>>(
+  arr: T,
+  size: number,
+  fill = undefined
+) {
+  return arr.concat(Array(size - arr.length).fill(fill)) as T;
+}
+
+//#region internal.ts
 
 // @internal
 function completeSubjectOnInstance(instance: any, prop: symbol) {
@@ -115,44 +138,69 @@ function wrapInjectable(type: any, symbol: symbol): void {
 }
 
 // @internal
-export function createEffect<T, InstanceType = Record<RecordKey, any>>(
-  source: ObservableInput<T>,
-  args:
-    | [InstanceType, keyof InstanceType]
-    | [InstanceType]
-    | ((...p: any[]) => unknown)
-    | undefined
+export function createEffect<
+  T,
+  TInstance = Record<RecordKey, any>,
+  TObservable extends unknown[] = unknown[]
+>(
+  source:
+    | ObservableInput<T>
+    | ((...value: SourceArgType<typeof args, TObservable>) => void),
+  args?:
+    | ((...p: unknown[]) => unknown)
+    | [TInstance, keyof TInstance]
+    | [TInstance, keyof TInstance, Observable<TObservable> | TObservable]
+    | [TInstance, Observable<TObservable> | TObservable]
+    | Observable<TObservable>,
+  deps?: Observable<TObservable> | TObservable
 ) {
   const isArgsTuple = Array.isArray(args);
   // eslint-disable-next-line prefer-const
-  let [instance, method, callback] = isArgsTuple
-    ? [...args, undefined]
-    : [undefined, undefined, args ?? (() => undefined)];
+  let [instance, method, _deps, callback] = isArgsTuple
+    ? [...arrayPad(args, 3), undefined]
+    : isObservable(args)
+    ? [undefined, undefined, args, undefined]
+    : [undefined, undefined, deps, args ?? (() => undefined)];
+
+  const __deps = Array.isArray(_deps)
+    ? of(_deps)
+    : (_deps as Observable<TObservable>);
+
   // Create a
-  const symbol = getSymbol(method);
+  const symbol = getSymbol<TInstance>(method as keyof TInstance);
   if (typeof instance === 'undefined' || instance === null) {
     // If the instance is undefined, we assume method is used
     // outside the scope of a class therefore it must be completed
     // manually  by the developper
-    instance = createCompletableInstance(
-      symbol,
-      callback
-    ) as any as InstanceType;
+    instance = createCompletableInstance(symbol, callback) as any as TInstance;
   }
   instance = createSubjectOnInstance(instance, symbol);
   if (isArgsTuple && typeof instance !== 'undefined') {
     // **Note**
     // Implementation support angular component, injectable and directive
     // class ngOnDestroy be default
-    instance = decorateClassMethod(instance, symbol, method);
+    instance = decorateClassMethod(instance, symbol, method as keyof TInstance);
   }
   if (instance === null || typeof instance === 'undefined') {
     return;
   }
-  from(source)
+  const internal$: Observable<unknown> =
+    typeof source === 'function'
+      ? __deps.pipe(
+          distinctUntilChanged(),
+          tap((state) => source(...state)),
+          observeOn(
+            typeof requestAnimationFrame === 'function'
+              ? animationFrameScheduler
+              : asyncScheduler
+          )
+        )
+      : from(source);
+  internal$
     .pipe(takeUntil((instance as any)[symbol as any] as Subject<void>))
     .subscribe();
   // Creates a completable object which when call
   // will unsubscribe from the internal observable
   return callback ? (instance as any) : undefined;
 }
+//#endregion internal.ts
