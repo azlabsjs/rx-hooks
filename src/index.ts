@@ -209,6 +209,7 @@ export function useRxEffect<
     | ObservableInput<T>
     | ((...value: SourceArgType<typeof destroy, TObservable>) => void),
   destroy?:
+    | [TInstance]
     | [TInstance, keyof TInstance]
     | [TInstance, keyof TInstance, Observable<TObservable> | TObservable]
     | [TInstance, Observable<TObservable> | TObservable]

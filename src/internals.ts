@@ -148,6 +148,7 @@ export function createEffect<
     | ((...value: SourceArgType<typeof args, TObservable>) => void),
   args?:
     | ((...p: unknown[]) => unknown)
+    | [TInstance]
     | [TInstance, keyof TInstance]
     | [TInstance, keyof TInstance, Observable<TObservable> | TObservable]
     | [TInstance, Observable<TObservable> | TObservable]
