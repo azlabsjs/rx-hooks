@@ -1,6 +1,6 @@
 import { memoize } from '@azlabsjs/functional';
 import { Observable, ObservableInput, ReplaySubject } from 'rxjs';
-import { distinctUntilChanged, filter, scan, startWith } from 'rxjs/operators';
+import { startWith } from 'rxjs/operators';
 import { createEffect } from './internals';
 import {
   CreateEffectType,
@@ -8,7 +8,7 @@ import {
   SetStateFunctionType,
   SourceArgType,
   UseReducerReturnType,
-  UseStateReturnType,
+  UseStateReturnType
 } from './types';
 
 // @internal - Function to update state object
@@ -61,12 +61,8 @@ function useStateReducer<S>(state: S, action: SetStateFunctionType<S> | S): S {
  * @param initial 
  * @returns 
  */
-export function useRxState<T = any>(initial: T, bufferSize = 1) {
-  return useRxReducer(
-    useStateReducer,
-    initial,
-    bufferSize
-  ) as UseStateReturnType<T>;
+export function useRxState<T = any>(initial: T) {
+  return useRxReducer(useStateReducer, initial) as UseStateReturnType<T>;
 }
 
 /**
@@ -100,37 +96,40 @@ export function useRxState<T = any>(initial: T, bufferSize = 1) {
  * @returns 
  */
 export function useRxReducer<T, ActionType = any>(
-  reducer: (state: T, action: ActionType) => unknown,
+  reducer: (state: T, action: ActionType) => T,
   initial: T,
-  bufferSize = Infinity
+  init?: (_initial: unknown) => T
 ) {
-  // We create an infinite or a buffered replay subject so that late
-  // subscribers can access previously emitted value by the
-  // observer
-  const _action$ = new ReplaySubject<ActionType>(bufferSize);
+  // Initialize the state observable and the _lastState variable that will hold the last
+  // state of the observable
+  let _lastState!: T;
+  const _state$ = new ReplaySubject<T>(1);
+
   // Provides a memoization implementation arround the inital
-  // if the initial value is a function type
-  const _initial = (
-    typeof initial === 'function' ? memoize(initial as any) : initial
-  ) as any;
+  const _initcb = memoize(
+    init
+      ? (_initial: unknown) => {
+          _lastState = init(_initial);
+          return _lastState;
+        }
+      : (_initial: unknown) => {
+          _lastState = _initial as T;
+          return _lastState;
+        }
+  );
 
   /**
    * @description Action dispatcher
    */
   const dispatch = (action: ActionType) => {
-    _action$.next(action);
+    _lastState = reducer(_lastState as T, action as ActionType) as T;
+    _state$.next(_lastState);
   };
 
-  const state = _action$.pipe(
-    startWith(typeof _initial === 'function' ? _initial() : _initial),
-    filter((state) => typeof state !== 'undefined' && state !== null),
-    scan((state, action) => {
-      return reducer(state as T, action as ActionType) as T;
-    }),
-    distinctUntilChanged()
-  );
-
-  return [state, dispatch] as UseReducerReturnType<T, ActionType>;
+  return [
+    _state$.pipe(startWith(_initcb(initial))),
+    dispatch,
+  ] as UseReducerReturnType<T, ActionType>;
 }
 
 /**

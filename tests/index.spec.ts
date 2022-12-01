@@ -1,11 +1,10 @@
 import { interval, lastValueFrom, of, Subject } from 'rxjs';
-import { tap, takeUntil, first, take } from 'rxjs/operators';
+import { first, take, takeUntil, tap } from 'rxjs/operators';
 import {
   useCompletableRxEffect,
   useRxEffect,
   useRxReducer,
-  useRxState,
-  // useRxEffect,
+  useRxState
 } from '../src';
 
 jest.setTimeout(10000);
@@ -28,7 +27,7 @@ const testResponse: { [index: string]: any }[] = JSON.parse(
 describe('Test hooks implementation', () => {
   it('states should contains the initial state and the last emitted state value', async () => {
     const states: number[][] = [];
-    const [state, setState] = useRxState<number[]>([], 1);
+    const [state, setState] = useRxState<number[]>([]);
     const _done$ = new Subject<void>();
 
     setState([1, 2, 4, 5]);
@@ -118,7 +117,7 @@ describe('Test hooks implementation', () => {
             return state;
         }
       },
-      []
+      [] as object[]
     );
 
     state.pipe(tap((state) => changes.push(state))).subscribe();
