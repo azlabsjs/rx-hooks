@@ -4,3 +4,9 @@
 
 - added useCompletableRxEffect to be used outside class scope
 - updated implementation of rxEffect to accept a Javascript object and destruction methods as parameters
+
+## [0.1.20] 2023-02-21
+
+- Added Reducer & State decorator for providing properties to component for local state management
+- Moved hooks to dedicated `hooks.ts` file
+- Added `StateComponentType` and `ReducerComponentType` interfaces that must be implemented by component with `@Reducer()` and `@State` decorators
