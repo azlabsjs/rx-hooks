@@ -10,3 +10,7 @@
 - Added Reducer & State decorator for providing properties to component for local state management
 - Moved hooks to dedicated `hooks.ts` file
 - Added `StateComponentType` and `ReducerComponentType` interfaces that must be implemented by component with `@Reducer()` and `@State` decorators
+
+## [0.2.2]
+
+- Moved `@Reducer()` and `@State` decorators to a dedicated package for es6 compatiblity issues
