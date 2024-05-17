@@ -1,7 +1,11 @@
 {
     "version": "0.2.3",
     "license": "MIT",
+    "name": "@azlabsjs/rx-hooks",
+    "author": "azandrew-sidoine",
     "main": "dist/index.js",
+    "module": "dist/esm/index.mjs",
+    "types": "dist/types/index.d.ts",
     "typings": "dist/types/index.d.ts",
     "files": [
         "dist/**/*"
@@ -15,7 +19,6 @@
         "lint": "ts-build lint",
         "prepare": "git config core.hookspath .githooks && ts-build build",
         "size": "size-limit",
-        "analyze": "size-limit --why",
         "test": "jest",
         "prettier": "prettier --write src/**/*"
     },
@@ -32,14 +35,16 @@
     },
     "exports": {
         ".": {
-            "import": "./dist/esm/index.mjs",
-            "require": "./dist/cjs/index.cjs",
-            "default": "./dist/cjs/index.cjs"
+            "import": {
+                "types": "./dist/types/index.d.mts",
+                "default": "./dist/esm/index.mjs"
+            },
+            "require": {
+                "types": "./dist/types/index.d.ts",
+                "default": "./dist/cjs/index.cjs"
+            }
         }
     },
-    "name": "@azlabsjs/rx-hooks",
-    "author": "azandrew-sidoine",
-    "module": "dist/esm/index.mjs",
     "size-limit": [
         {
             "path": "dist/cjs/index.cjs",
@@ -51,8 +56,8 @@
         }
     ],
     "devDependencies": {
-        "@azlabsjs/ts-build": "^0.3.2",
-        "@size-limit/preset-small-lib": "^7.0.8",
+        "@azlabsjs/ts-build": "^0.4.21",
+        "@size-limit/preset-small-lib": "^11.0",
         "@types/jest": "^27.4.1",
         "@typescript-eslint/eslint-plugin": "^5.18.0",
         "@typescript-eslint/parser": "^5.18.0",

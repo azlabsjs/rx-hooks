@@ -55,7 +55,8 @@ export function getSafeProperty<T>(objWithPropertyToExtract: T): string {
 }
 export const __NG_PIPE_DEF__ = getSafeProperty({ ɵpipe: getSafeProperty });
 
-export interface NgPipeType extends Object {
+/** @internal */
+export interface NgPipeType extends NonNullable<unknown> {
   ɵpipe: any;
 }
 
