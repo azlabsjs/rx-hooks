@@ -1,10 +1,10 @@
-import { interval, lastValueFrom, of, Subject } from 'rxjs';
-import { first, take, takeUntil, tap } from 'rxjs/operators';
+import { interval, lastValueFrom , of, Subject } from 'rxjs'; //
+import { first, tap, take, takeUntil } from 'rxjs/operators'; //
 import {
   useCompletableRxEffect,
   useRxEffect,
   useRxReducer,
-  useRxState
+  useRxState,
 } from '../src';
 
 jest.setTimeout(10000);
@@ -25,27 +25,24 @@ const testResponse: { [index: string]: any }[] = JSON.parse(
 );
 
 describe('Test hooks implementation', () => {
-  it('states should contains the initial state and the last emitted state value', async () => {
-    const states: number[][] = [];
-    const [state, setState] = useRxState<number[]>([]);
+  it('states should check that changes contains all state changes', async () => {
+    const [state, setState, changes] = useRxState<number[]>([], null, true);
     const _done$ = new Subject<void>();
 
     setState([1, 2, 4, 5]);
     setState([1, 2, 5]);
     setState([1, 23, 5, 6]);
-    state
-      .pipe(
-        tap((state) => states.push(state)),
-        takeUntil(_done$)
-      )
-      .subscribe();
+
+    state.pipe(takeUntil(_done$)).subscribe();
 
     await lastValueFrom(
       interval(1000).pipe(
         first(),
         tap(() => {
-          expect(states[0]).toEqual([]);
-          expect(states[1]).toEqual([1, 23, 5, 6]);
+          expect(changes[0]).toEqual([]);
+          expect(changes[1]).toEqual([1, 2, 4, 5]);
+          expect(changes[2]).toEqual([1, 2, 5]);
+          expect(changes[3]).toEqual([1, 23, 5, 6]);
           _done$.next();
         })
       )
@@ -105,8 +102,7 @@ describe('Test hooks implementation', () => {
   });
 
   it('changes should contains all state changes', async () => {
-    const changes: object[] = [];
-    const [state, dispatch] = useRxReducer(
+    const [_, dispatch, changes] = useRxReducer(
       (state, action: { type: string; payload?: any }) => {
         switch (action.type) {
           case 'push':
@@ -117,15 +113,16 @@ describe('Test hooks implementation', () => {
             return state;
         }
       },
-      [] as object[]
+      [] as object[],
+      null,
+      true
     );
-
-    state.pipe(tap((state) => changes.push(state))).subscribe();
 
     dispatch({ type: 'push', payload: 1 });
     dispatch({ type: 'push', payload: 2 });
     dispatch({ type: 'push', payload: 4 });
     dispatch({ type: 'pop' });
+
     await lastValueFrom(
       interval(1000).pipe(
         first(),
@@ -224,5 +221,45 @@ describe('Test hooks implementation', () => {
       },
     ]);
     await lastValueFrom(interval(1000).pipe(first()));
+  });
+
+  it('it should force reducer to wait for initialization to complete', async () => {
+    const [_, dispatch, changes] = useRxReducer(
+      (state, action: { type: string; payload?: any }) => {
+        switch (action.type) {
+          case 'push':
+            return [...state, action.payload];
+          case 'pop':
+            return state.slice(0, state.length - 1);
+          default:
+            return state;
+        }
+      },
+      [] as number[],
+      () => {
+        return new Promise<number[]>((resolve) => {
+          setTimeout(() => resolve([9, 13, 18]), 1000);
+        });
+      },
+      true
+    );
+
+    dispatch({ type: 'push', payload: 1 });
+    dispatch({ type: 'push', payload: 2 });
+    dispatch({ type: 'push', payload: 4 });
+    dispatch({ type: 'pop' });
+
+    await lastValueFrom(
+      interval(1500).pipe(
+        first(),
+        tap(() => {
+          expect(changes[0]).toEqual([]);
+          expect(changes[1]).toEqual([9, 13, 18, 1]);
+          expect(changes[2]).toEqual([9, 13, 18, 1, 2]);
+          expect(changes[3]).toEqual([9, 13, 18, 1, 2, 4]);
+          expect(changes[4]).toEqual([9, 13, 18, 1, 2]);
+        })
+      )
+    );
   });
 });

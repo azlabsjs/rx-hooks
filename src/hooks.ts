@@ -1,15 +1,16 @@
-import { memoize } from '@azlabsjs/functional';
-import { Observable, ObservableInput, ReplaySubject } from 'rxjs';
-import { startWith } from 'rxjs/operators';
+import { BehaviorSubject, Observable, ObservableInput } from 'rxjs';
 import { createEffect } from './internals';
 import {
-    CreateEffectType,
-    RecordKey,
-    SetStateFunctionType,
-    SourceArgType,
-    UseReducerReturnType,
-    UseStateReturnType
+  CreateEffectType,
+  RecordKey,
+  SetStateFunctionType,
+  SourceArgType,
+  UseReducerReturnType,
+  UseStateReturnType,
 } from './types';
+
+/** @internal */
+type ReducerFnType<T, A> = (state: T, action: A) => T;
 
 // @internal - Function to update state object
 // Mutate or update the state of value wrapped by the useRxState()
@@ -61,8 +62,15 @@ function useStateReducer<S>(state: S, action: SetStateFunctionType<S> | S): S {
  * @param initial 
  * @returns 
  */
-export function useRxState<T = any>(initial: T) {
-  return useRxReducer(useStateReducer, initial) as UseStateReturnType<T>;
+export function useRxState<T = any>(
+  initial: T,
+  init?: ((_initial: unknown) => T | Promise<T>) | null,
+  debug?: true
+) {
+  return useRxReducer(useStateReducer, initial, init, debug) as [
+    ...UseStateReturnType<T>,
+    T[]
+  ];
 }
 
 /**
@@ -96,40 +104,95 @@ export function useRxState<T = any>(initial: T) {
  * @returns 
  */
 export function useRxReducer<T, ActionType = any>(
-  reducer: (state: T, action: ActionType) => T,
+  reducer: ReducerFnType<T, ActionType>,
   initial: T,
-  init?: (_initial: unknown) => T
+  init?: ((_initial: unknown) => T | Promise<T>) | null,
+  debug?: true
 ) {
-  // Initialize the state observable and the _lastState variable that will hold the last
-  // state of the observable
-  let _lastState!: T;
-  const _state$ = new ReplaySubject<T>(1);
+  let _lastVal: T = initial;
+  const _changes: T[] = [];
+  let resolving = false;
+  let cachedReducers: ((p: T) => T)[] = [];
 
-  // Provides a memoization implementation arround the inital
-  const _initcb = memoize(
-    init
-      ? (_initial: unknown) => {
-          _lastState = init(_initial);
-          return _lastState;
-        }
-      : (_initial: unknown) => {
-          _lastState = _initial as T;
-          return _lastState;
-        }
-  );
+  // Start the observale with the initial reducer function so that the first
+  // value is provided to first listener
+  const _state$ = new BehaviorSubject<T>(_lastVal);
 
-  /**
-   * @description Action dispatcher
-   */
-  const dispatch = (action: ActionType) => {
-    _lastState = reducer(_lastState as T, action as ActionType) as T;
-    _state$.next(_lastState);
+  // We log the initial state of the component
+  if (debug) {
+    _changes.push(_lastVal);
+  }
+  // Case initial function has never been called
+  // we call the initial function with the privided initial value
+  const handleInit = async () => {
+    if (!init) {
+      return;
+    }
+    const result = init(_lastVal);
+    const isPromise =
+      typeof result === 'object' &&
+      (result as Promise<any>)['then'] &&
+      typeof (result as Promise<any>)['then'] === 'function';
+    if (!isPromise) {
+      _lastVal = result as T;
+      _state$.next(_lastVal);
+      if (debug) {
+        _changes.push(_lastVal);
+      }
+      return;
+    }
+    resolving = true;
+    const awaited: T = await result;
+    if (cachedReducers.length > 0) {
+      _lastVal = cachedReducers.reduce(function (carry, reducer) {
+        carry = reducer(carry);
+        // Push the change of each reducer to the stack to keep track of all changes
+        if (debug) {
+          _changes.push(carry);
+        }
+        return carry;
+      }, awaited);
+      _state$.next(_lastVal);
+    } else {
+      _lastVal = awaited;
+      _state$.next(_lastVal);
+      if (debug) {
+        _changes.push(_lastVal);
+      }
+    }
+    // Reset resolving state after the promise is resolved
+    cachedReducers = [];
+    resolving = false;
   };
 
-  return [
-    _state$.pipe(startWith(_initcb(initial))),
-    dispatch,
-  ] as UseReducerReturnType<T, ActionType>;
+  /**  @description Action dispatcher */
+  const dispatch = (action: ActionType) => {
+    // Case we are resolving the initial value, we add the reducer to the
+    // list of of cachedReducers
+    if (resolving) {
+      cachedReducers.push((s) => reducer(s, action));
+      return;
+    }
+    // The we call the reducer to reduce state and set
+    // the last state to the result of the reducer
+    _lastVal = reducer(_lastVal, action);
+    if (debug) {
+      _changes.push(_lastVal);
+    }
+    // Then we notify the observable of a state update so that listeners
+    // get the last emitted value
+    _state$.next(_lastVal);
+  };
+
+  // Call handle init to call initialization function
+  // We assume initialization can return a promise
+  // therefore we execute it inside an async hook
+  handleInit();
+
+  return [_state$.asObservable(), dispatch, _changes] as [
+    ...UseReducerReturnType<T, ActionType>,
+    T[]
+  ];
 }
 
 /**
