@@ -19,6 +19,6 @@
 
 - Upgraded @azlabsjs/ts-build version to 0.4.21
 
-## [v0.2.5] 2024-05-27
+## [v0.2.10] 2024-05-27
 
 - Review useRxReducer implementation adding support for debuging that tracks state changes and changed ReplaySubject with BehaviorSubject
