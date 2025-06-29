@@ -8,7 +8,7 @@ module.exports = {
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   collectCoverageFrom: ['src/**/*.{ts,tsx,js,jsx}'],
   testMatch: ['<rootDir>/tests/**/*.(spec|test).{ts,tsx,js,jsx}'],
-  testURL: 'http://localhost',
+  testEnvironmentOptions: { url: 'http://localhost' },
   watchPlugins: [
     require.resolve('jest-watch-typeahead/filename'),
     require.resolve('jest-watch-typeahead/testname'),

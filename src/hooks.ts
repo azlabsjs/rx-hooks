@@ -5,6 +5,7 @@ import {
   RecordKey,
   SetStateFunctionType,
   SourceArgType,
+  UnknownType,
   UseReducerReturnType,
   UseStateReturnType,
 } from './types';
@@ -62,14 +63,14 @@ function useStateReducer<S>(state: S, action: SetStateFunctionType<S> | S): S {
  * @param initial 
  * @returns 
  */
-export function useRxState<T = any>(
+export function useRxState<T = UnknownType>(
   initial: T,
   init?: ((_initial: unknown) => T | Promise<T>) | null,
   debug?: true
 ) {
   return useRxReducer(useStateReducer, initial, init, debug) as [
     ...UseStateReturnType<T>,
-    T[]
+    T[],
   ];
 }
 
@@ -103,7 +104,7 @@ export function useRxState<T = any>(
  * @param initial 
  * @returns 
  */
-export function useRxReducer<T, ActionType = any>(
+export function useRxReducer<T, ActionType = UnknownType>(
   reducer: ReducerFnType<T, ActionType>,
   initial: T,
   init?: ((_initial: unknown) => T | Promise<T>) | null,
@@ -131,8 +132,8 @@ export function useRxReducer<T, ActionType = any>(
     const result = init(_lastVal);
     const isPromise =
       typeof result === 'object' &&
-      (result as Promise<any>)['then'] &&
-      typeof (result as Promise<any>)['then'] === 'function';
+      (result as Promise<UnknownType>)['then'] &&
+      typeof (result as Promise<UnknownType>)['then'] === 'function';
     if (!isPromise) {
       _lastVal = result as T;
       _state$.next(_lastVal);
@@ -191,7 +192,7 @@ export function useRxReducer<T, ActionType = any>(
 
   return [_state$.asObservable(), dispatch, _changes] as [
     ...UseReducerReturnType<T, ActionType>,
-    T[]
+    T[],
   ];
 }
 
@@ -264,8 +265,8 @@ export function useRxReducer<T, ActionType = any>(
 
 export function useRxEffect<
   T,
-  TInstance = Record<RecordKey, any>,
-  TObservable extends unknown[] = unknown[]
+  TInstance = Record<RecordKey, UnknownType>,
+  TObservable extends unknown[] = unknown[],
 >(
   source:
     | ObservableInput<T>
@@ -351,19 +352,25 @@ export function useRxEffect<
  */
 export function useCompletableRxEffect<
   T,
-  TObservable extends unknown[] = unknown[]
+  TObservable extends unknown[] = unknown[],
 >(
   source:
     | ObservableInput<T>
     | ((...value: SourceArgType<typeof complete, TObservable>) => void),
   complete:
-    | ((...p: any[]) => unknown)
-    | [(...p: any[]) => unknown, Observable<TObservable> | TObservable]
+    | ((...p: UnknownType[]) => unknown)
+    | [(...p: UnknownType[]) => unknown, Observable<TObservable> | TObservable]
 ) {
   const completeType = typeof complete;
   const deps =
-    completeType === 'function' ? [] : (complete as any[])[1] ?? undefined;
+    completeType === 'function'
+      ? []
+      : ((complete as UnknownType[])[1] ?? undefined);
   const _complete =
-    completeType === 'function' ? complete : (complete as any[])[0];
-  return createEffect(source, _complete, deps as any) as CreateEffectType;
+    completeType === 'function' ? complete : (complete as UnknownType[])[0];
+  return createEffect(
+    source,
+    _complete,
+    deps as UnknownType
+  ) as CreateEffectType;
 }

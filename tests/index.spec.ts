@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { interval, lastValueFrom , of, Subject } from 'rxjs'; //
 import { first, tap, take, takeUntil } from 'rxjs/operators'; //
 import {
@@ -6,10 +7,11 @@ import {
   useRxReducer,
   useRxState,
 } from '../src';
+import { UnknownType } from '../src/types';
 
 jest.setTimeout(10000);
 
-const testResponse: { [index: string]: any }[] = JSON.parse(
+const testResponse: { [index: string]: UnknownType }[] = JSON.parse(
   `[{
     "userId": 1,
     "id": 1,
@@ -103,7 +105,7 @@ describe('Test hooks implementation', () => {
 
   it('changes should contains all state changes', async () => {
     const [_, dispatch, changes] = useRxReducer(
-      (state, action: { type: string; payload?: any }) => {
+      (state, action: { type: string; payload?: UnknownType }) => {
         switch (action.type) {
           case 'push':
             return [...state, action.payload];
@@ -200,7 +202,7 @@ describe('Test hooks implementation', () => {
   });
 
   it('rxEffect should run when dependencies changes', async () => {
-    let subject2$ = new Subject<[string, Record<string, unknown>]>();
+    const subject2$ = new Subject<[string, Record<string, unknown>]>();
     useCompletableRxEffect(
       (path: string, options?: Record<string, unknown>) => {
         expect(path).toEqual('api/v1/posts');
@@ -225,7 +227,7 @@ describe('Test hooks implementation', () => {
 
   it('it should force reducer to wait for initialization to complete', async () => {
     const [_, dispatch, changes] = useRxReducer(
-      (state, action: { type: string; payload?: any }) => {
+      (state, action: { type: string; payload?: UnknownType }) => {
         switch (action.type) {
           case 'push':
             return [...state, action.payload];

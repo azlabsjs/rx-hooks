@@ -12,9 +12,9 @@ import {
   isObservable,
   asyncScheduler,
 } from 'rxjs';
-import { RecordKey, SourceArgType } from './types';
+import { RecordKey, SourceArgType, UnknownType } from './types';
 
-function arrayPad<T extends Array<any>>(
+function arrayPad<T extends Array<UnknownType>>(
   arr: T,
   size: number,
   fill = undefined
@@ -25,7 +25,7 @@ function arrayPad<T extends Array<any>>(
 //#region internal.ts
 
 // @internal
-function completeSubjectOnInstance(instance: any, prop: symbol) {
+function completeSubjectOnInstance(instance: UnknownType, prop: symbol) {
   if (instance[prop]) {
     instance[prop].next();
     instance[prop].complete();
@@ -47,7 +47,7 @@ function getSymbol<T>(method?: keyof T): symbol {
 //@internal
 export function getSafeProperty<T>(objWithPropertyToExtract: T): string {
   for (const key in objWithPropertyToExtract) {
-    if (objWithPropertyToExtract[key] === (getSafeProperty as any)) {
+    if (objWithPropertyToExtract[key] === (getSafeProperty as UnknownType)) {
       return key;
     }
   }
@@ -57,15 +57,15 @@ export const __NG_PIPE_DEF__ = getSafeProperty({ ɵpipe: getSafeProperty });
 
 /** @internal */
 export interface NgPipeType extends NonNullable<unknown> {
-  ɵpipe: any;
+  ɵpipe: UnknownType;
 }
 
-export function isPipe(target: any): target is NgPipeType {
+export function isPipe(target: UnknownType): target is NgPipeType {
   return !!target[__NG_PIPE_DEF__];
 }
 
 //@internal
-export function createSubjectOnInstance(instance: any, symbol: symbol) {
+export function createSubjectOnInstance(instance: UnknownType, symbol: symbol) {
   if (!instance[symbol]) {
     instance = Object.defineProperty(instance, symbol, {
       value: new Subject<void>(),
@@ -80,16 +80,16 @@ export function createSubjectOnInstance(instance: any, symbol: symbol) {
 
 export function createCompletableInstance(
   symbol: symbol,
-  callback: ((...args: any) => unknown) | undefined
+  callback: ((...args: UnknownType) => unknown) | undefined
 ) {
-  let instance = (...values: any) => {
+  let instance = (...values: UnknownType) => {
     if (callback && typeof callback === 'function') {
       callback(...values);
     }
     completeSubjectOnInstance(instance, symbol);
   };
   instance = Object.defineProperty(instance, 'complete', {
-    value: (...args: any) => {
+    value: (...args: UnknownType) => {
       instance(...args);
     },
   });
@@ -97,10 +97,10 @@ export function createCompletableInstance(
 }
 
 // @internal
-function wrapClassMethod(instance: any, method: string, symbol: symbol) {
-  const original: (...args: any) => unknown | null | undefined =
+function wrapClassMethod(instance: UnknownType, method: string, symbol: symbol) {
+  const original: (...args: UnknownType) => unknown | null | undefined =
     instance[method] || undefined;
-  return (...args: any) => {
+  return (...args: UnknownType) => {
     if (null !== original && typeof original !== 'undefined') {
       original(...args);
     }
@@ -112,13 +112,13 @@ function wrapClassMethod(instance: any, method: string, symbol: symbol) {
 }
 
 // @internal
-function decorateClassMethod<T extends Record<keyof T, any> = any>(
+function decorateClassMethod<T extends Record<keyof T, UnknownType> = UnknownType>(
   instance: T,
   symbol: symbol,
   method?: keyof T
 ) {
   if (typeof method === 'string') {
-    instance[method] = wrapClassMethod(instance, method, symbol) as any;
+    instance[method] = wrapClassMethod(instance, method, symbol) as UnknownType;
   } else if (isPipe(instance)) {
     wrapPipe(instance, symbol);
   } else {
@@ -134,14 +134,14 @@ function wrapPipe(type: NgPipeType, symbol: symbol) {
 }
 
 // @internal
-function wrapInjectable(type: any, symbol: symbol): void {
+function wrapInjectable(type: UnknownType, symbol: symbol): void {
   type['ngOnDestroy'] = wrapClassMethod(type, 'ngOnDestroy', symbol);
 }
 
 // @internal
 export function createEffect<
   T,
-  TInstance = Record<RecordKey, any>,
+  TInstance = Record<RecordKey, UnknownType>,
   TObservable extends unknown[] = unknown[]
 >(
   source:
@@ -174,7 +174,7 @@ export function createEffect<
     // If the instance is undefined, we assume method is used
     // outside the scope of a class therefore it must be completed
     // manually  by the developper
-    instance = createCompletableInstance(symbol, callback) as any as TInstance;
+    instance = createCompletableInstance(symbol, callback) as UnknownType as TInstance;
   }
   instance = createSubjectOnInstance(instance, symbol);
   if (isArgsTuple && typeof instance !== 'undefined') {
@@ -199,10 +199,10 @@ export function createEffect<
         )
       : from(source);
   internal$
-    .pipe(takeUntil((instance as any)[symbol as any] as Subject<void>))
+    .pipe(takeUntil((instance as UnknownType)[symbol as UnknownType] as Subject<void>))
     .subscribe();
   // Creates a completable object which when call
   // will unsubscribe from the internal observable
-  return callback ? (instance as any) : undefined;
+  return callback ? (instance as UnknownType) : undefined;
 }
 //#endregion internal.ts
